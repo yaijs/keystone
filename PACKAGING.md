@@ -29,20 +29,22 @@ Each artifact should include:
 - the `keystone` binary
 - `README.md`
 - `installer/README.md` as quick integration reference
+- Linux should also include `install-keystone-linux.sh` for the common first-run path
 - a `.sha256` checksum file
 
 ## First User Flow
 
 1. Download the correct release artifact for the OS.
 2. Extract it to a known location.
-3. Run the binary directly or move it into a stable per-user location.
-4. Connect it to the current browser:
+3. On Linux, prefer the bundled helper script from the extracted folder.
+4. Otherwise run the binary directly or move it into a stable per-user location.
+5. Connect it to the current browser:
 
 ```bash
 keystone install <browser> <dev|beta|prod> <extension-id> <path-to-keystone-binary>
 ```
 
-5. Open Y/TXT Options and test the Keystone connection.
+6. Open Y/TXT Options and test the Keystone connection.
 
 ## Intended Stable Binary Locations
 
@@ -106,5 +108,5 @@ This repo now includes that first workflow in `.github/workflows/release.yml`.
 
 1. Publish the first tagged GitHub Release with downloadable artifacts.
 2. Update Y/TXT Options help to assume downloadable release binaries instead of source builds.
-3. Add Linux-specific “move to `~/.local/bin`” guidance in the UI and docs.
+3. Add Linux-specific helper/install guidance in the UI and docs.
 4. Later add signed/native installers for macOS and Windows.

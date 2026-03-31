@@ -1,8 +1,29 @@
 # Installer Notes
 
-These files are examples only.
+Keystone release artifacts now ship with a first Linux helper script:
 
-The first real installer must:
+- `install-keystone-linux.sh`
+
+That helper is meant for the extracted GitHub Release folder. It:
+
+- copies the released `keystone` binary into a stable per-user location
+- ensures it is executable
+- keeps the chosen flavor in a stable subdirectory
+- runs `keystone install ...` for the chosen browser target and extension ID
+
+Example:
+
+```bash
+./install-keystone-linux.sh chrome prod your_extension_id
+```
+
+Optional custom install root:
+
+```bash
+./install-keystone-linux.sh brave prod your_extension_id ~/.local/opt/keystone
+```
+
+The first real polished installer still needs to go further:
 
 - place the Native Messaging manifest in the correct per-OS browser location
 - write the actual installed binary path
@@ -40,7 +61,7 @@ Supported Linux browser targets currently include:
 - `opera`
 - `vivaldi`
 
-The shell script remains available, but the main `keystone` binary is now the preferred entry point for local install and status flows.
+The older shell script remains available, but the main `keystone` binary is now the preferred entry point for local install and status flows.
 
 On Linux this installs:
 

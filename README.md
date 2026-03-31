@@ -226,6 +226,32 @@ cargo run --bin keystone -- install all dev yourdevextensionid /absolute/path/to
 
 This does not silently install everywhere by default. `all` is explicit.
 
+## Linux Release Install
+
+The Linux GitHub Release archive now includes a small helper script for the common end-user path:
+
+```bash
+./install-keystone-linux.sh <browser|all> <dev|beta|prod> <extension-id>
+```
+
+Example:
+
+```bash
+./install-keystone-linux.sh chrome prod your_extension_id
+```
+
+What it does:
+
+- copies the released `keystone` binary into `~/.local/opt/keystone/<flavor>/keystone`
+- makes it executable
+- runs `keystone install ...` against that stable installed path
+
+After that:
+
+1. reload the Y/TXT extension
+2. open Y/TXT Options
+3. click `Test Keystone Connection`
+
 ## Chrome Web Store Submission Notes
 
 If Y/TXT is submitted to the Chrome Web Store, the reviewer-facing justification should be based on the current implementation, not the older design drafts.

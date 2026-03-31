@@ -54,6 +54,10 @@ jobs:
           cp target/${{ matrix.target }}/release/${{ matrix.binary_name }} dist/${{ matrix.archive_name }}/
           cp README.md dist/${{ matrix.archive_name }}/README.md
           cp installer/README.md dist/${{ matrix.archive_name }}/INSTALLER.md
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            cp installer/install-keystone-linux.sh dist/${{ matrix.archive_name }}/install-keystone-linux.sh
+            chmod +x dist/${{ matrix.archive_name }}/install-keystone-linux.sh
+          fi
           tar -C dist -czf dist/${{ matrix.archive_name }}.tar.gz ${{ matrix.archive_name }}
           shasum -a 256 dist/${{ matrix.archive_name }}.tar.gz > dist/${{ matrix.archive_name }}.tar.gz.sha256
 
