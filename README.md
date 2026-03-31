@@ -9,6 +9,8 @@ This repository currently contains:
 - a working Rust native host in `src/`
 - a local admin UI served from Keystone itself at `/admin`
 
+Release artifacts for tagged versions are published through GitHub Actions.
+
 ## Current Status
 
 Implemented now:
