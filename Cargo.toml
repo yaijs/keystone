@@ -1,0 +1,26 @@
+[package]
+name = "keystone"
+version = "0.1.0"
+edition = "2021"
+description = "Keystone native host skeleton for secure extension credential bridging"
+license = "MIT"
+
+[dependencies]
+axum = "0.8"
+chrono = { version = "0.4", features = ["serde"] }
+dirs = "6"
+keyring = { version = "3", default-features = false, features = ["apple-native", "linux-native", "windows-native"] }
+rand = "0.8"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal"] }
+uuid = { version = "1", features = ["serde", "v4"] }
+
+[[bin]]
+name = "keystone"
+path = "src/main.rs"
+
+[[bin]]
+name = "keystone-dev"
+path = "src/bin/keystone_dev.rs"

@@ -1,0 +1,6 @@
+/target
+.tmp/
+archive/
+.vscode/
+.DS_Store
+.notes.md

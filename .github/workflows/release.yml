@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            archive_name: keystone-linux-x86_64
+            binary_name: keystone
+            package_format: tar.gz
+          - os: macos-13
+            target: x86_64-apple-darwin
+            archive_name: keystone-macos-x86_64
+            binary_name: keystone
+            package_format: tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive_name: keystone-windows-x86_64
+            binary_name: keystone.exe
+            package_format: zip
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build release binary
+        run: cargo build --release --locked --bin keystone --target ${{ matrix.target }}
+
+      - name: Prepare Unix archive
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/${{ matrix.archive_name }}
+          cp target/${{ matrix.target }}/release/${{ matrix.binary_name }} dist/${{ matrix.archive_name }}/
+          cp README.md dist/${{ matrix.archive_name }}/README.md
+          cp installer/README.md dist/${{ matrix.archive_name }}/INSTALLER.md
+          tar -C dist -czf dist/${{ matrix.archive_name }}.tar.gz ${{ matrix.archive_name }}
+          shasum -a 256 dist/${{ matrix.archive_name }}.tar.gz > dist/${{ matrix.archive_name }}.tar.gz.sha256
+
+      - name: Prepare Windows archive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "dist/${{ matrix.archive_name }}" | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" "dist/${{ matrix.archive_name }}/"
+          Copy-Item "README.md" "dist/${{ matrix.archive_name }}/README.md"
+          Copy-Item "installer/README.md" "dist/${{ matrix.archive_name }}/INSTALLER.md"
+          Compress-Archive -Path "dist/${{ matrix.archive_name }}/*" -DestinationPath "dist/${{ matrix.archive_name }}.zip" -Force
+          $hash = Get-FileHash "dist/${{ matrix.archive_name }}.zip" -Algorithm SHA256
+          "$($hash.Hash.ToLower())  ${{ matrix.archive_name }}.zip" | Out-File -FilePath "dist/${{ matrix.archive_name }}.zip.sha256" -Encoding ascii
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive_name }}
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256

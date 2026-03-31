@@ -1,0 +1,9 @@
+{
+  "name": "com.ytxt.keystone.dev",
+  "description": "Keystone native host for Y/TXT development builds",
+  "path": "/absolute/path/to/keystone",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://REPLACE_WITH_DEV_EXTENSION_ID/"
+  ]
+}
