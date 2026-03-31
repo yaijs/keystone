@@ -1,4 +1,5 @@
 use std::io::{Read, Write};
+use std::path::PathBuf;
 
 use serde::Serialize;
 
@@ -138,6 +139,7 @@ async fn bridge_status(state: &AppState) -> StatusResult {
 
     let active_sessions = state.sessions.lock().await.count();
     let providers = state.vault.lock().await.list_provider_status();
+    let wrapper_path = host_wrapper_dir().join(state.config.flavor.host_id());
 
     StatusResult {
         host_version: HOST_VERSION,
@@ -146,7 +148,15 @@ async fn bridge_status(state: &AppState) -> StatusResult {
         active_sessions,
         providers,
         admin_ui_url: format!("{}/admin", state.http_base_url),
+        wrapper_path: wrapper_path.display().to_string(),
+        wrapper_present: wrapper_path.exists(),
     }
+}
+
+fn host_wrapper_dir() -> PathBuf {
+    dirs::home_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(".local/share/keystone/native-hosts")
 }
 
 async fn bridge_open_settings(state: &AppState) -> OpenSettingsResult {

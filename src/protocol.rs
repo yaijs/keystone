@@ -90,6 +90,8 @@ pub struct StatusResult {
     pub active_sessions: usize,
     pub providers: Vec<ProviderStatus>,
     pub admin_ui_url: String,
+    pub wrapper_path: String,
+    pub wrapper_present: bool,
 }
 
 #[derive(Debug, Serialize)]
