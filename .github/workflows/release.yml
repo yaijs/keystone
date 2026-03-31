@@ -20,7 +20,6 @@ jobs:
             archive_name: keystone-linux-x86_64
             binary_name: keystone
             package_format: tar.gz
-          - os: macos-13
           - os: macos-15-intel
             target: x86_64-apple-darwin
             archive_name: keystone-macos-x86_64
