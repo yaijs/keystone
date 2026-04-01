@@ -11,6 +11,20 @@ This repository currently contains:
 
 Release artifacts for tagged versions are published through GitHub Actions.
 
+## Screenshots
+
+Admin overview:
+
+![Keystone admin overview](./screenshots/screenshot-1-keystone-admin.png)
+
+Browser install status:
+
+![Keystone admin browser install status](./screenshots/screenshot-2-keystone-admin-browser-install-status.png)
+
+Provider secret management:
+
+![Keystone admin providers view](./screenshots/screenshot-3-keystone-admin-providers.png)
+
 ## Current Status
 
 Implemented now:
