@@ -42,7 +42,7 @@ async fn run_standalone() -> Result<(), KeystoneError> {
     let state = AppState::new().await?;
     eprintln!("Keystone standalone mode");
     eprintln!("Flavor: {}", state.config.flavor.as_str());
-    eprintln!("Admin UI: {}/admin", state.http_base_url);
+    eprintln!("Admin UI: {}/admin?token={}", state.http_base_url, state.admin_token);
     eprintln!("Tunnel base URL: {}", state.http_base_url);
     eprintln!("Press Ctrl+C to stop.");
 

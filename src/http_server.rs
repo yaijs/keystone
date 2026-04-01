@@ -218,10 +218,24 @@ async fn admin_ui() -> Html<&'static str> {
     const setupSummaryEl = document.getElementById('setup-summary');
     const installDetectedBtn = document.getElementById('install-detected-btn');
     const removeAllBtn = document.getElementById('remove-all-btn');
+    const adminToken = new URLSearchParams(window.location.search).get('token') || '';
 
     function setMessage(text, isError = false) {
       messageEl.textContent = text;
       messageEl.className = isError ? 'bad' : 'ok';
+    }
+
+    function adminHeaders(extra = {}) {
+      return adminToken
+        ? { ...extra, authorization: `Bearer ${adminToken}` }
+        : { ...extra };
+    }
+
+    async function adminFetch(url, init = {}) {
+      return fetch(url, {
+        ...init,
+        headers: adminHeaders(init.headers || {}),
+      });
     }
 
     function setSetupBanner(data) {
@@ -252,7 +266,7 @@ async fn admin_ui() -> Html<&'static str> {
     }
 
     async function loadStatus() {
-      const response = await fetch('/admin/api/status');
+      const response = await adminFetch('/admin/api/status');
       const data = await response.json();
 
       runtimeEl.innerHTML = `
@@ -339,7 +353,7 @@ async fn admin_ui() -> Html<&'static str> {
           if (!browser) return;
 
           try {
-            const resp = await fetch(`/admin/api/install/${browser}`, { method: 'POST' });
+            const resp = await adminFetch(`/admin/api/install/${browser}`, { method: 'POST' });
             const result = await resp.json();
             if (!resp.ok) throw new Error(result.error || result.message || 'install failed');
             setMessage(`Installed Keystone for ${browser}.`);
@@ -364,7 +378,7 @@ async fn admin_ui() -> Html<&'static str> {
                 setMessage(`Enter a secret for ${provider} first.`, true);
                 return;
               }
-              const resp = await fetch('/admin/api/secrets', {
+              const resp = await adminFetch('/admin/api/secrets', {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({ provider, secret })
@@ -374,7 +388,7 @@ async fn admin_ui() -> Html<&'static str> {
               setMessage(`Stored secret for ${provider}.`);
               input.value = '';
             } else {
-              const resp = await fetch(`/admin/api/secrets/${provider}`, { method: 'DELETE' });
+              const resp = await adminFetch(`/admin/api/secrets/${provider}`, { method: 'DELETE' });
               const result = await resp.json();
               if (!resp.ok) throw new Error(result.error || result.message || 'delete failed');
               setMessage(`Deleted secret for ${provider}.`);
@@ -389,7 +403,7 @@ async fn admin_ui() -> Html<&'static str> {
 
     installDetectedBtn.addEventListener('click', async () => {
       try {
-        const resp = await fetch('/admin/api/install', { method: 'POST' });
+        const resp = await adminFetch('/admin/api/install', { method: 'POST' });
         const result = await resp.json();
         if (!resp.ok) throw new Error(result.error || result.message || 'install failed');
         const installed = Array.isArray(result.installed) ? result.installed : [];
@@ -409,7 +423,7 @@ async fn admin_ui() -> Html<&'static str> {
       if (!confirmed) return;
 
       try {
-        const resp = await fetch('/admin/api/install', { method: 'DELETE' });
+        const resp = await adminFetch('/admin/api/install', { method: 'DELETE' });
         const result = await resp.json();
         if (!resp.ok) throw new Error(result.error || result.message || 'remove failed');
         const removed = Array.isArray(result.removed) ? result.removed : [];
@@ -492,7 +506,11 @@ struct AdminRemoveResult {
     wrapper_removed: bool,
 }
 
-async fn admin_status(State(state): State<AppState>) -> Json<AdminStatus> {
+async fn admin_status(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<AdminStatus>, HttpError> {
+    authorize_admin(&state, &headers)?;
     let pairing = state
         .pairing
         .lock()
@@ -547,7 +565,7 @@ async fn admin_status(State(state): State<AppState>) -> Json<AdminStatus> {
         })
         .collect();
 
-    Json(AdminStatus {
+    Ok(Json(AdminStatus {
         flavor: state.config.flavor.as_str().to_string(),
         host_id,
         host_version: crate::protocol::HOST_VERSION,
@@ -559,12 +577,14 @@ async fn admin_status(State(state): State<AppState>) -> Json<AdminStatus> {
         pairing,
         browser_manifests,
         providers,
-    })
+    }))
 }
 
 async fn admin_install_detected(
     State(state): State<AppState>,
+    headers: HeaderMap,
 ) -> Result<Json<AdminInstallResult>, HttpError> {
+    authorize_admin(&state, &headers)?;
     let extension_id = current_extension_id_hint(&state).await;
     let binary_path = current_binary_path()?;
     let mut installed = Vec::new();
@@ -596,8 +616,10 @@ async fn admin_install_detected(
 
 async fn admin_install_browser(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(browser): Path<String>,
 ) -> Result<Json<AdminInstallResult>, HttpError> {
+    authorize_admin(&state, &headers)?;
     if !supported_browsers().contains(&browser.as_str()) {
         return Err(HttpError::BadRequest("unsupported browser".to_string()));
     }
@@ -623,7 +645,9 @@ async fn admin_install_browser(
 
 async fn admin_remove_all(
     State(state): State<AppState>,
+    headers: HeaderMap,
 ) -> Result<Json<AdminRemoveResult>, HttpError> {
+    authorize_admin(&state, &headers)?;
     let mut removed = Vec::new();
     let host_id = state.config.flavor.host_id();
 
@@ -651,8 +675,10 @@ async fn admin_remove_all(
 
 async fn admin_set_secret(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(payload): Json<SecretUpdateRequest>,
 ) -> Result<Json<Value>, HttpError> {
+    authorize_admin(&state, &headers)?;
     if payload.secret.trim().is_empty() {
         return Err(HttpError::BadRequest("secret must not be empty".to_string()));
     }
@@ -673,8 +699,10 @@ async fn admin_set_secret(
 
 async fn admin_delete_secret(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(provider): Path<String>,
 ) -> Result<Json<Value>, HttpError> {
+    authorize_admin(&state, &headers)?;
     let mut vault = state.vault.lock().await;
     if !vault.is_provider_known(&provider) {
         return Err(HttpError::BadRequest("unknown provider".to_string()));
@@ -820,7 +848,7 @@ async fn authorize(
     operation: &str,
 ) -> Result<crate::session::SessionRecord, HttpError> {
     let token = extract_bearer_token(headers).ok_or(HttpError::Unauthorized)?;
-    let sessions = state.sessions.lock().await;
+    let mut sessions = state.sessions.lock().await;
     sessions
         .validate_token(&token, operation)
         .ok_or(HttpError::Unauthorized)
@@ -831,8 +859,17 @@ async fn authorize_any(
     headers: &HeaderMap,
 ) -> Result<crate::session::SessionRecord, HttpError> {
     let token = extract_bearer_token(headers).ok_or(HttpError::Unauthorized)?;
-    let sessions = state.sessions.lock().await;
+    let mut sessions = state.sessions.lock().await;
     sessions.validate_token_any(&token).ok_or(HttpError::Unauthorized)
+}
+
+fn authorize_admin(state: &AppState, headers: &HeaderMap) -> Result<(), HttpError> {
+    let token = extract_bearer_token(headers).ok_or(HttpError::Unauthorized)?;
+    if token == state.admin_token {
+        Ok(())
+    } else {
+        Err(HttpError::Unauthorized)
+    }
 }
 
 fn extract_bearer_token(headers: &HeaderMap) -> Option<String> {

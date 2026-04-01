@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::time::Instant;
 
+use rand::{distributions::Alphanumeric, Rng};
 use tokio::sync::Mutex;
 
 use crate::config::RuntimeConfig;
@@ -19,6 +20,7 @@ pub struct AppState {
     pub state_store: StateStore,
     pub extension_id_seen: String,
     pub http_base_url: String,
+    pub admin_token: String,
     pub http_client: reqwest::Client,
     pub providers: ProviderRegistry,
     pub pairing: Arc<Mutex<PairingStore>>,
@@ -43,6 +45,7 @@ impl AppState {
             config,
             state_store,
             http_base_url: String::new(),
+            admin_token: random_token(),
             http_client: reqwest::Client::new(),
             providers: ProviderRegistry::default(),
             pairing,
@@ -57,6 +60,14 @@ impl AppState {
             ..state
         })
     }
+}
+
+fn random_token() -> String {
+    rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(48)
+        .map(char::from)
+        .collect()
 }
 
 fn vault_backend(config: &RuntimeConfig) -> Box<dyn crate::vault::SecretStore> {

@@ -147,7 +147,7 @@ async fn bridge_status(state: &AppState) -> StatusResult {
         pairing_status,
         active_sessions,
         providers,
-        admin_ui_url: format!("{}/admin", state.http_base_url),
+        admin_ui_url: format!("{}/admin?token={}", state.http_base_url, state.admin_token),
         wrapper_path: wrapper_path.display().to_string(),
         wrapper_present: wrapper_path.exists(),
     }
@@ -162,7 +162,7 @@ fn host_wrapper_dir() -> PathBuf {
 async fn bridge_open_settings(state: &AppState) -> OpenSettingsResult {
     OpenSettingsResult {
         ok: true,
-        url: format!("{}/admin", state.http_base_url),
+        url: format!("{}/admin?token={}", state.http_base_url, state.admin_token),
     }
 }
 
