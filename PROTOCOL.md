@@ -4,7 +4,7 @@ This document defines the v1 protocol for Keystone as described in [CONCEPT.keys
 
 The design is intentionally narrow:
 
-- one paired plugin first
+- one paired browser extension first
 - Native Messaging as the trust root
 - localhost HTTP as the request data plane
 - provider-native passthrough, not schema normalization
@@ -14,7 +14,7 @@ The design is intentionally narrow:
 Keystone v1 supports:
 
 - host discovery and version negotiation
-- plugin pairing
+- extension pairing
 - provider listing and secret management
 - short-lived session issuance
 - authenticated localhost forwarding for LLM provider requests
@@ -107,7 +107,7 @@ Each error response must be:
 
 Rules:
 
-- `id` is plugin-generated and echoed unchanged
+- `id` is client-generated and echoed unchanged
 - exactly one of `result` or `error` must be present
 - unknown methods return `METHOD_NOT_FOUND`
 - malformed payloads return `INVALID_REQUEST`
@@ -202,7 +202,7 @@ Behavior:
 
 Purpose:
 
-- expose minimal diagnostics to the plugin or local UI
+- expose minimal diagnostics to the extension or local UI
 
 Success result:
 
@@ -385,7 +385,7 @@ Purpose:
 
 Rules:
 
-- request body is accepted as provided by the plugin
+- request body is accepted as provided by the extension
 - Keystone validates session and provider scope
 - Keystone resolves the configured provider upstream URL
 - Keystone fetches the provider secret from the OS store
@@ -402,7 +402,7 @@ Success:
 
 Optional in v1.
 
-Only expose this route if the plugin's first real integration needs it.
+Only expose this route if the first real extension integration needs it.
 
 Behavior matches `/v1/chat/completions`:
 
@@ -410,7 +410,7 @@ Behavior matches `/v1/chat/completions`:
 - provider auth injection
 - provider-native passthrough
 
-The plugin must not supply arbitrary upstream URLs through these endpoints. Route and upstream selection are bound server-side from the issued session plus provider configuration.
+The extension must not supply arbitrary upstream URLs through these endpoints. Route and upstream selection are bound server-side from the issued session plus provider configuration.
 
 ## 6. Provider Configuration Rules
 
@@ -434,7 +434,7 @@ Rules:
 - credentials must never be attached to arbitrary URLs
 - custom providers must use HTTPS
 - custom providers must require explicit user confirmation
-- the plugin must not choose an arbitrary upstream host once a session is issued
+- the extension must not choose an arbitrary upstream host once a session is issued
 
 ## 7. Error Model
 
@@ -474,9 +474,9 @@ On host restart:
 - select a new random port
 - clear all sessions
 - preserve pairing records
-- require the plugin to call `bridge.hello` and `llm.open_session` again
+- require the extension to call `bridge.hello` and `llm.open_session` again
 
-The plugin must treat:
+The extension must treat:
 
 - Native Messaging disconnect
 - HTTP connection failure

@@ -1,8 +1,22 @@
 # Keystone
 
-Your local key host for secure connections in insecure browser terrain.
+Local credential proxy with managed secret storage for browser-extension clients.
 
 License: [MIT](./LICENSE)
+
+Keystone is a browser-extension-first local companion that:
+
+- stores provider secrets in the OS keyring instead of extension storage
+- issues short-lived local sessions for proxied requests
+- injects provider credentials only during forwarding
+- reduces secret exposure compared with keeping keys in extension storage
+
+Important limits:
+
+- secrets are still present in Keystone process memory during active use
+- an authorized or compromised client can still misuse granted access
+- Keystone improves secret handling; it does not eliminate trust risk
+- localhost is only transport here, not a trust boundary by itself
 
 This repository currently contains:
 
@@ -42,7 +56,7 @@ Still missing for a polished release:
 
 - local approval UI for first pairing / secret replacement
 - signed/notarized installer flow for macOS and Windows
-- packaging, signing, and release automation
+- uninstall and recovery polish
 - broader UX around first-run setup and upgrades
 
 ## Support Matrix
@@ -54,6 +68,8 @@ That means:
 - secrets live in Keystone's own local storage and OS keyring, outside the browser
 - pairing and trust are separated by flavor (`dev`, `beta`, `prod`) and extension ID
 - each browser still needs its own Native Messaging manifest installed before it can launch Keystone
+
+This is policy and install separation, not hard same-user isolation between local clients.
 
 Current support:
 
@@ -90,10 +106,11 @@ cargo run --bin keystone -- serve
 ```
 
 This starts Keystone's localhost HTTP server, prints the admin URL, and keeps running until `Ctrl+C`.
+That localhost surface is part of Keystone's transport layer and still needs an explicit threat-model document and tighter control-plane wording.
 
 ## Packaging
 
-The first release target is downloadable GitHub Release artifacts, not source-build-only usage.
+The current release target is downloadable GitHub Release artifacts with helper-based install flows, not source-build-only usage.
 
 Packaging scope and release-shape planning live in [PACKAGING.md](/home/enginypsilon/bin/ai/keystone/PACKAGING.md).
 
@@ -102,7 +119,8 @@ The short version:
 - Linux, macOS, and Windows release binaries
 - checksums for every artifact
 - same `keystone` CLI on every OS
-- browser integration still handled by `keystone install ...` or the admin UI
+- browser integration handled by `keystone install ...` or the helper scripts that call it
+- no promise yet of package-manager/store distribution maturity
 
 ## Main CLI
 
@@ -194,6 +212,8 @@ It does not store real secrets or call a real provider.
 ## Local Admin UI
 
 Keystone exposes a localhost admin page from the same ephemeral HTTP server it uses for authenticated provider tunneling.
+
+That admin surface should currently be understood as local management UI for a browser-extension companion, not as a general local control plane for arbitrary clients.
 
 Current admin routes:
 
@@ -336,4 +356,4 @@ Suggested submission text:
 
 ### Reviewer Notes
 
-> Keystone is an optional security enhancement, not a hard dependency for basic testing. If Keystone is not installed, Y/TXT falls back to extension-managed provider keys configured through the options page. This allows reviewers to test the extension without installing the companion app, while still documenting the stronger local-vault option for users who want it.
+> Keystone is an optional local companion, not a hard dependency for basic testing. If Keystone is not installed, Y/TXT falls back to extension-managed provider keys configured through the options page. This allows reviewers to test the extension without installing the companion app, while still documenting the stronger outside-the-browser storage path for users who want it.

@@ -6,7 +6,7 @@ Keystone release artifacts now ship with helper scripts for the supported releas
 - `install-keystone-macos.sh`
 - `install-keystone-windows.ps1`
 
-That helper is meant for the extracted GitHub Release folder. It:
+These helpers are meant for the extracted GitHub Release folder. They:
 
 - copies the released `keystone` binary into a stable per-user location
 - ensures it is executable
@@ -37,7 +37,7 @@ Windows PowerShell example:
 .\install-keystone-windows.ps1 chrome prod your_extension_id
 ```
 
-The first real polished installer still needs to go further:
+Current limits:
 
 - handle code signing, notarization, and Windows SmartScreen reputation
 - run a post-install smoke test that validates `bridge.hello`
@@ -72,6 +72,7 @@ Supported browser targets vary by OS:
 - Windows: `chrome`, `chromium`, `brave`, `vivaldi` (pending live smoke test)
 
 The older shell script remains available, but the main `keystone` binary is now the preferred entry point for local install and status flows.
+These helpers are convenience wrappers around that browser-extension install path, not a full native installer system yet.
 
 On Linux and macOS this installs:
 

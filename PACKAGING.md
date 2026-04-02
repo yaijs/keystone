@@ -11,10 +11,11 @@ The first acceptable packaging level is:
 - downloadable release artifacts on GitHub Releases
 - one `keystone` binary artifact per OS
 - checksums for every artifact
-- one predictable install/integration story per OS
-- browser integration still handled by the built-in `keystone install ...` command or the admin UI
+- one predictable helper-based install/integration story per OS
+- browser integration still handled by the built-in `keystone install ...` command or the bundled helper scripts
 
-This is intentionally not the final polished installer story. It is the first real release shape.
+This is intentionally not the final polished installer story.
+It is the first honest release shape for a browser-extension-first local credential proxy.
 
 ## Release Artifacts
 
@@ -46,7 +47,7 @@ Each artifact should include:
 keystone install <browser> <dev|beta|prod> <extension-id> <path-to-keystone-binary>
 ```
 
-6. Open Y/TXT Options and test the Keystone connection.
+6. Open the client extension and test the Keystone connection.
 
 ## Intended Stable Binary Locations
 
@@ -93,6 +94,7 @@ The unified part of Keystone should remain:
   - `keystone install ...`
 
 Only the outer distribution layer should vary per OS.
+Keystone should not promise more packaging maturity than it has actually tested.
 
 ## Release Pipeline
 
@@ -109,6 +111,6 @@ This repo now includes that first workflow in `.github/workflows/release.yml`.
 ## Next Packaging Steps
 
 1. Publish the first tagged GitHub Release with downloadable artifacts.
-2. Update Y/TXT Options help to assume downloadable release binaries instead of source builds.
-3. Add macOS and Windows helper/install guidance in the UI and docs.
+2. Keep client integration docs aligned with downloadable release binaries instead of source builds.
+3. Verify helper install flows with real smoke tests per OS.
 4. Later add signed/native installers for macOS and Windows.
