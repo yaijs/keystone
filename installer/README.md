@@ -68,7 +68,7 @@ cargo run --bin keystone -- install chrome dev yourdevextensionid /absolute/path
 Supported browser targets vary by OS:
 
 - Linux: `chrome`, `chromium`, `brave`, `opera`, `vivaldi`
-- macOS: `chrome`, `chromium`, `brave`, `vivaldi` (pending live smoke test)
+- macOS: `chrome`, `chromium`, `brave`, `vivaldi`
 - Windows: `chrome`, `chromium`, `brave`, `vivaldi` (pending live smoke test)
 
 The older shell script remains available, but the main `keystone` binary is now the preferred entry point for local install and status flows.

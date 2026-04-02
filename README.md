@@ -62,10 +62,10 @@ Current support:
 - Linux + Brave: supported
 - Linux + Opera: supported
 - Linux + Vivaldi: supported
-- macOS + Chrome: helper-based install flow, pending live smoke test
-- macOS + Chromium: helper-based install flow, pending live smoke test
-- macOS + Brave: helper-based install flow, pending live smoke test
-- macOS + Vivaldi: helper-based install flow, pending live smoke test
+- macOS + Chrome: helper-based install flow
+- macOS + Chromium: helper-based install flow
+- macOS + Brave: helper-based install flow
+- macOS + Vivaldi: helper-based install flow
 - Windows + Chrome: helper-based install flow, pending live smoke test
 - Windows + Chromium: helper-based install flow, pending live smoke test
 - Windows + Brave: helper-based install flow, pending live smoke test
