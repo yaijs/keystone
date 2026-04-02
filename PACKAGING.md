@@ -29,14 +29,16 @@ Each artifact should include:
 - the `keystone` binary
 - `README.md`
 - `installer/README.md` as quick integration reference
-- Linux should also include `install-keystone-linux.sh` for the common first-run path
+- Linux should include `install-keystone-linux.sh`
+- macOS should include `install-keystone-macos.sh`
+- Windows should include `install-keystone-windows.ps1`
 - a `.sha256` checksum file
 
 ## First User Flow
 
 1. Download the correct release artifact for the OS.
 2. Extract it to a known location.
-3. On Linux, prefer the bundled helper script from the extracted folder.
+3. Prefer the bundled OS-specific helper script from the extracted folder.
 4. Otherwise run the binary directly or move it into a stable per-user location.
 5. Connect it to the current browser:
 
@@ -58,17 +60,17 @@ These are the recommended support targets for documentation and future installer
 
 ### macOS
 
-- preferred first release form: extracted binary or app bundle from GitHub Release
+- preferred first release form: extracted binary plus `install-keystone-macos.sh`
 - later improvement: signed and notarized app/bundle
 
 ### Windows
 
-- preferred first release form: extracted `keystone.exe` from GitHub Release
+- preferred first release form: extracted `keystone.exe` plus `install-keystone-windows.ps1`
 - later improvement: MSI or installer package
 
 ## Current Scope
 
-The first release automation deliberately does not solve:
+The current release automation still does not solve:
 
 - code signing
 - notarization
@@ -108,5 +110,5 @@ This repo now includes that first workflow in `.github/workflows/release.yml`.
 
 1. Publish the first tagged GitHub Release with downloadable artifacts.
 2. Update Y/TXT Options help to assume downloadable release binaries instead of source builds.
-3. Add Linux-specific helper/install guidance in the UI and docs.
+3. Add macOS and Windows helper/install guidance in the UI and docs.
 4. Later add signed/native installers for macOS and Windows.

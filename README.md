@@ -35,13 +35,13 @@ Implemented now:
 - Pairing persistence per flavor
 - OS keyring-backed secret storage
 - Localhost provider tunnel for supported upstream APIs
-- Native-host installer script for Linux Chromium-family browsers
+- Native-host helper installers for Linux, macOS, and Windows release builds
 - Local admin UI and JSON status endpoints at `/admin` and `/admin/api/status`
 
-Still missing for a real release:
+Still missing for a polished release:
 
 - local approval UI for first pairing / secret replacement
-- polished per-OS installer flow for macOS and Windows
+- signed/notarized installer flow for macOS and Windows
 - packaging, signing, and release automation
 - broader UX around first-run setup and upgrades
 
@@ -62,8 +62,14 @@ Current support:
 - Linux + Brave: supported
 - Linux + Opera: supported
 - Linux + Vivaldi: supported
-- macOS: not implemented yet
-- Windows: not implemented yet
+- macOS + Chrome: helper-based install flow, pending live smoke test
+- macOS + Chromium: helper-based install flow, pending live smoke test
+- macOS + Brave: helper-based install flow, pending live smoke test
+- macOS + Vivaldi: helper-based install flow, pending live smoke test
+- Windows + Chrome: helper-based install flow, pending live smoke test
+- Windows + Chromium: helper-based install flow, pending live smoke test
+- Windows + Brave: helper-based install flow, pending live smoke test
+- Windows + Vivaldi: helper-based install flow, pending live smoke test
 
 So support in one browser does not automatically imply support in another browser, even though the underlying Keystone state can be reused once both are installed.
 
@@ -260,6 +266,48 @@ What it does:
 
 - copies the released `keystone` binary into `~/.local/opt/keystone/<flavor>/keystone`
 - makes it executable
+- runs `keystone install ...` against that stable installed path
+
+## macOS Release Install
+
+The macOS GitHub Release archive now includes a matching helper script:
+
+```bash
+./install-keystone-macos.sh <browser|all> <dev|beta|prod> <extension-id>
+```
+
+Example:
+
+```bash
+./install-keystone-macos.sh chrome prod your_extension_id
+```
+
+What it does:
+
+- copies the released `keystone` binary into `~/Library/Application Support/Keystone/<flavor>/keystone`
+- makes it executable
+- attempts to clear the macOS quarantine attribute from the installed binary
+- runs `keystone install ...` against that stable installed path
+
+## Windows Release Install
+
+The Windows GitHub Release archive now includes a PowerShell helper script:
+
+```powershell
+.\install-keystone-windows.ps1 <browser|all> <dev|beta|prod> <extension-id>
+```
+
+Example:
+
+```powershell
+.\install-keystone-windows.ps1 chrome prod your_extension_id
+```
+
+What it does:
+
+- copies `keystone.exe` into `%LOCALAPPDATA%\Keystone\<flavor>\keystone.exe`
+- writes the Native Messaging manifest into Keystone's per-user support directory
+- registers the required browser-specific registry key
 - runs `keystone install ...` against that stable installed path
 
 After that:

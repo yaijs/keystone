@@ -1,11 +1,13 @@
 use std::env;
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use keystone::app::AppState;
 use keystone::config::{HostFlavor, RuntimeConfig};
 use keystone::error::KeystoneError;
-use keystone::manifest::NativeHostManifest;
+use keystone::installer::{
+    browser_manifest_path, browser_root_dir, install_one, supported_browsers,
+    wrapper_path_for_host,
+};
 use keystone::native_messaging::run_native_host;
 use keystone::pairing::TrustRecord;
 use keystone::state_store::StateStore;
@@ -85,7 +87,7 @@ fn collect_status() -> Result<StatusOutput, KeystoneError> {
         }));
     let vault = Vault::new(Box::new(KeyringSecretStore::new(config.flavor)));
     let host_id = config.flavor.host_id();
-    let wrapper_path = host_wrapper_dir().join(host_id);
+    let wrapper_path = wrapper_path_for_host(host_id);
 
     let providers = vault
         .providers()
@@ -100,12 +102,8 @@ fn collect_status() -> Result<StatusOutput, KeystoneError> {
     let manifests = supported_browsers()
         .iter()
         .map(|browser| {
-            let manifest_path = browser_dir(browser).join(format!("{host_id}.json"));
-            let browser_root = manifest_path
-                .parent()
-                .and_then(|path| path.parent())
-                .map(Path::to_path_buf)
-                .unwrap_or_else(|| browser_dir(browser));
+            let manifest_path = browser_manifest_path(browser, host_id);
+            let browser_root = browser_root_dir(browser);
             StatusManifest {
                 browser: (*browser).to_string(),
                 manifest_path: manifest_path.display().to_string(),
@@ -183,10 +181,9 @@ fn print_status_human(status: &StatusOutput) {
 fn run_detect() -> Result<(), KeystoneError> {
     let mut found = false;
     for browser in supported_browsers() {
-        let dir = browser_dir(browser);
-        let root = dir.parent().unwrap_or(&dir);
+        let root = browser_root_dir(browser);
         if root.exists() {
-            println!("{}\t{}", browser, dir.display());
+            println!("{}\t{}", browser, root.display());
             found = true;
         }
     }
@@ -230,8 +227,7 @@ fn run_install(args: &[String]) -> Result<(), KeystoneError> {
     if target == "all" {
         let mut installed_any = false;
         for browser in supported_browsers() {
-            let dir = browser_dir(browser);
-            let root = dir.parent().unwrap_or(&dir);
+            let root = browser_root_dir(browser);
             if root.exists() {
                 install_one(browser, flavor, extension_id, &binary_path)?;
                 installed_any = true;
@@ -253,71 +249,6 @@ fn run_install(args: &[String]) -> Result<(), KeystoneError> {
 
     install_one(target, flavor, extension_id, &binary_path)
 }
-
-fn install_one(
-    browser: &str,
-    flavor: HostFlavor,
-    extension_id: &str,
-    binary_path: &Path,
-) -> Result<(), KeystoneError> {
-    let manifest_dir = browser_dir(browser);
-    fs::create_dir_all(&manifest_dir)?;
-
-    let host_id = flavor.host_id();
-    let manifest_path = manifest_dir.join(format!("{host_id}.json"));
-    let wrapper_dir = host_wrapper_dir();
-    fs::create_dir_all(&wrapper_dir)?;
-    let wrapper_path = wrapper_dir.join(host_id);
-
-    let wrapper = format!(
-        "#!/usr/bin/env bash\nset -euo pipefail\nexport KEYSTONE_FLAVOR=\"{}\"\nexec \"{}\" \"$@\"\n",
-        flavor.as_str(),
-        binary_path.display()
-    );
-    fs::write(&wrapper_path, wrapper)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = fs::metadata(&wrapper_path)?.permissions();
-        perms.set_mode(0o755);
-        fs::set_permissions(&wrapper_path, perms)?;
-    }
-
-    let manifest = NativeHostManifest::for_flavor(
-        flavor,
-        &wrapper_path.display().to_string(),
-        extension_id,
-    );
-    let manifest_json = serde_json::to_string_pretty(&manifest)?;
-    fs::write(&manifest_path, manifest_json)?;
-
-    println!("installed {}: {}", browser, manifest_path.display());
-    println!("wrapper: {}", wrapper_path.display());
-    Ok(())
-}
-
-fn host_wrapper_dir() -> PathBuf {
-    dirs::home_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join(".local/share/keystone/native-hosts")
-}
-
-fn browser_dir(browser: &str) -> PathBuf {
-    let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-    match browser {
-        "chrome" => home.join(".config/google-chrome/NativeMessagingHosts"),
-        "chromium" => home.join(".config/chromium/NativeMessagingHosts"),
-        "brave" => home.join(".config/BraveSoftware/Brave-Browser/NativeMessagingHosts"),
-        "opera" => home.join(".config/opera/NativeMessagingHosts"),
-        "vivaldi" => home.join(".config/vivaldi/NativeMessagingHosts"),
-        other => home.join(format!(".config/{other}/NativeMessagingHosts")),
-    }
-}
-
-fn supported_browsers() -> &'static [&'static str] {
-    &["chrome", "chromium", "brave", "opera", "vivaldi"]
-}
-
 fn parse_flavor(value: &str) -> Option<HostFlavor> {
     match value {
         "dev" => Some(HostFlavor::Dev),

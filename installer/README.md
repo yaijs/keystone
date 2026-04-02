@@ -1,8 +1,10 @@
 # Installer Notes
 
-Keystone release artifacts now ship with a first Linux helper script:
+Keystone release artifacts now ship with helper scripts for the supported release flows:
 
 - `install-keystone-linux.sh`
+- `install-keystone-macos.sh`
+- `install-keystone-windows.ps1`
 
 That helper is meant for the extracted GitHub Release folder. It:
 
@@ -23,13 +25,23 @@ Optional custom install root:
 ./install-keystone-linux.sh brave prod your_extension_id ~/.local/opt/keystone
 ```
 
+macOS example:
+
+```bash
+./install-keystone-macos.sh chrome prod your_extension_id
+```
+
+Windows PowerShell example:
+
+```powershell
+.\install-keystone-windows.ps1 chrome prod your_extension_id
+```
+
 The first real polished installer still needs to go further:
 
-- place the Native Messaging manifest in the correct per-OS browser location
-- write the actual installed binary path
-- use the intended extension ID for the selected build flavor
+- handle code signing, notarization, and Windows SmartScreen reputation
 - run a post-install smoke test that validates `bridge.hello`
-- ensure the launched host process knows its intended flavor; on Linux the current installer does this via a small wrapper script that exports `KEYSTONE_FLAVOR`
+- ensure the launched host process knows its intended flavor; the current installers do this via a small wrapper next to the Native Messaging manifest target
 
 Current example host id:
 
@@ -53,19 +65,23 @@ cargo run --bin keystone -- detect
 cargo run --bin keystone -- install chrome dev yourdevextensionid /absolute/path/to/target/debug/keystone
 ```
 
-Supported Linux browser targets currently include:
+Supported browser targets vary by OS:
 
-- `chrome`
-- `chromium`
-- `brave`
-- `opera`
-- `vivaldi`
+- Linux: `chrome`, `chromium`, `brave`, `opera`, `vivaldi`
+- macOS: `chrome`, `chromium`, `brave`, `vivaldi` (pending live smoke test)
+- Windows: `chrome`, `chromium`, `brave`, `vivaldi` (pending live smoke test)
 
 The older shell script remains available, but the main `keystone` binary is now the preferred entry point for local install and status flows.
 
-On Linux this installs:
+On Linux and macOS this installs:
 
 - the browser manifest into the browser's `NativeMessagingHosts` directory
-- a flavor-specific wrapper into `~/.local/share/keystone/native-hosts/`
+- a flavor-specific wrapper into the per-user Keystone data directory
+
+On Windows this installs:
+
+- the browser manifest into Keystone's per-user support directory
+- the required browser registry key pointing to that manifest
+- a flavor-specific `.cmd` wrapper in the per-user Keystone data directory
 
 The wrapper is the manifest target and launches the real binary with the correct `KEYSTONE_FLAVOR`.

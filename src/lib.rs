@@ -3,6 +3,7 @@ pub mod config;
 pub mod error;
 pub mod forwarder;
 pub mod http_server;
+pub mod installer;
 pub mod manifest;
 pub mod native_messaging;
 pub mod pairing;

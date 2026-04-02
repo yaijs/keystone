@@ -1,6 +1,6 @@
 use std::fs;
 use std::net::SocketAddr;
-use std::path::{Path as StdPath, PathBuf};
+use std::path::PathBuf;
 
 use axum::{
     extract::Path,
@@ -16,10 +16,12 @@ use serde_json::{json, Value};
 use tokio::net::TcpListener;
 
 use crate::app::AppState;
-use crate::config::HostFlavor;
 use crate::error::KeystoneError;
 use crate::forwarder::{forward_chat_completions, forward_messages};
-use crate::manifest::NativeHostManifest;
+use crate::installer::{
+    browser_manifest_path, browser_root_dir, install_one, remove_one, supported_browsers,
+    wrapper_path_for_host,
+};
 use crate::pairing::TrustRecord;
 
 pub async fn bind_localhost(state: AppState) -> Result<SocketAddr, KeystoneError> {
@@ -530,12 +532,8 @@ async fn admin_status(
     let browser_manifests = supported_browsers()
         .iter()
         .map(|browser| {
-            let manifest_path = browser_dir(browser).join(format!("{host_id}.json"));
-            let browser_root_path = manifest_path
-                .parent()
-                .and_then(|path| path.parent())
-                .map(StdPath::to_path_buf)
-                .unwrap_or_else(|| browser_dir(browser));
+            let manifest_path = browser_manifest_path(browser, &host_id);
+            let browser_root_path = browser_root_dir(browser);
 
             AdminBrowserManifest {
                 browser: (*browser).to_string(),
@@ -592,10 +590,10 @@ async fn admin_install_detected(
     let mut skipped = Vec::new();
 
     for browser in supported_browsers() {
-        let dir = browser_dir(browser);
-        let root = dir.parent().unwrap_or(&dir);
+        let root = browser_root_dir(browser);
         if root.exists() {
-            install_one(browser, state.config.flavor, &extension_id, &binary_path)?;
+            install_one(browser, state.config.flavor, &extension_id, &binary_path)
+                .map_err(HttpError::Upstream)?;
             installed.push(browser.to_string());
         } else {
             skipped.push(browser.to_string());
@@ -625,8 +623,7 @@ async fn admin_install_browser(
         return Err(HttpError::BadRequest("unsupported browser".to_string()));
     }
 
-    let dir = browser_dir(&browser);
-    let root = dir.parent().unwrap_or(&dir);
+    let root = browser_root_dir(&browser);
     if !root.exists() {
         return Err(HttpError::BadRequest(format!(
             "{browser} config directory not detected on this machine"
@@ -635,7 +632,8 @@ async fn admin_install_browser(
 
     let extension_id = current_extension_id_hint(&state).await;
     let binary_path = current_binary_path()?;
-    install_one(&browser, state.config.flavor, &extension_id, &binary_path)?;
+    install_one(&browser, state.config.flavor, &extension_id, &binary_path)
+        .map_err(HttpError::Upstream)?;
 
     Ok(Json(AdminInstallResult {
         ok: true,
@@ -653,17 +651,16 @@ async fn admin_remove_all(
     let host_id = state.config.flavor.host_id();
 
     for browser in supported_browsers() {
-        let manifest_path = browser_dir(browser).join(format!("{host_id}.json"));
-        if manifest_path.exists() {
-            fs::remove_file(&manifest_path).map_err(|err| HttpError::Upstream(err.into()))?;
+        if remove_one(browser, host_id).map_err(|err| HttpError::Upstream(err))? {
             removed.push(browser.to_string());
         }
     }
 
-    let wrapper_path = host_wrapper_dir().join(host_id);
+    let wrapper_path = wrapper_path_for_host(host_id);
     let mut wrapper_removed = false;
     if wrapper_path.exists() {
-        fs::remove_file(wrapper_path).map_err(|err| HttpError::Upstream(err.into()))?;
+        fs::remove_file(wrapper_path)
+            .map_err(|err: std::io::Error| HttpError::Upstream(err.into()))?;
         wrapper_removed = true;
     }
 
@@ -724,28 +721,6 @@ fn pairing_to_admin(record: TrustRecord) -> AdminPairing {
     }
 }
 
-fn browser_dir(browser: &str) -> PathBuf {
-    let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-    match browser {
-        "chrome" => home.join(".config/google-chrome/NativeMessagingHosts"),
-        "chromium" => home.join(".config/chromium/NativeMessagingHosts"),
-        "brave" => home.join(".config/BraveSoftware/Brave-Browser/NativeMessagingHosts"),
-        "opera" => home.join(".config/opera/NativeMessagingHosts"),
-        "vivaldi" => home.join(".config/vivaldi/NativeMessagingHosts"),
-        other => home.join(format!(".config/{other}/NativeMessagingHosts")),
-    }
-}
-
-fn supported_browsers() -> &'static [&'static str] {
-    &["chrome", "chromium", "brave", "opera", "vivaldi"]
-}
-
-fn host_wrapper_dir() -> PathBuf {
-    dirs::home_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join(".local/share/keystone/native-hosts")
-}
-
 fn current_binary_path() -> Result<PathBuf, HttpError> {
     std::env::current_exe().map_err(|err| HttpError::Upstream(err.into()))
 }
@@ -758,48 +733,6 @@ async fn current_extension_id_hint(state: &AppState) -> String {
         .current_record()
         .map(|record| record.extension_id)
         .unwrap_or_else(|| state.extension_id_seen.clone())
-}
-
-fn install_one(
-    browser: &str,
-    flavor: HostFlavor,
-    extension_id: &str,
-    binary_path: &StdPath,
-) -> Result<(), HttpError> {
-    let manifest_dir = browser_dir(browser);
-    fs::create_dir_all(&manifest_dir).map_err(|err| HttpError::Upstream(err.into()))?;
-
-    let host_id = flavor.host_id();
-    let manifest_path = manifest_dir.join(format!("{host_id}.json"));
-    let wrapper_dir = host_wrapper_dir();
-    fs::create_dir_all(&wrapper_dir).map_err(|err| HttpError::Upstream(err.into()))?;
-    let wrapper_path = wrapper_dir.join(host_id);
-
-    let wrapper = format!(
-        "#!/usr/bin/env bash\nset -euo pipefail\nexport KEYSTONE_FLAVOR=\"{}\"\nexec \"{}\" \"$@\"\n",
-        flavor.as_str(),
-        binary_path.display()
-    );
-    fs::write(&wrapper_path, wrapper).map_err(|err| HttpError::Upstream(err.into()))?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = fs::metadata(&wrapper_path)
-            .map_err(|err| HttpError::Upstream(err.into()))?
-            .permissions();
-        perms.set_mode(0o755);
-        fs::set_permissions(&wrapper_path, perms).map_err(|err| HttpError::Upstream(err.into()))?;
-    }
-
-    let manifest = NativeHostManifest::for_flavor(
-        flavor,
-        &wrapper_path.display().to_string(),
-        extension_id,
-    );
-    let manifest_json = serde_json::to_string_pretty(&manifest)
-        .map_err(|err| HttpError::Upstream(err.into()))?;
-    fs::write(&manifest_path, manifest_json).map_err(|err| HttpError::Upstream(err.into()))?;
-    Ok(())
 }
 
 fn shell_escape(value: &str) -> String {

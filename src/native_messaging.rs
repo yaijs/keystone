@@ -1,10 +1,10 @@
 use std::io::{Read, Write};
-use std::path::PathBuf;
 
 use serde::Serialize;
 
 use crate::app::AppState;
 use crate::error::KeystoneError;
+use crate::installer::wrapper_path_for_host;
 use crate::protocol::{
     supported_methods, Capabilities, ErrorCode, ErrorEnvelope, ErrorPayload, HelloParams,
     HelloResult, HOST_VERSION, OpenSessionParams, OpenSessionResult, OkResult, OpenSettingsResult,
@@ -139,7 +139,7 @@ async fn bridge_status(state: &AppState) -> StatusResult {
 
     let active_sessions = state.sessions.lock().await.count();
     let providers = state.vault.lock().await.list_provider_status();
-    let wrapper_path = host_wrapper_dir().join(state.config.flavor.host_id());
+    let wrapper_path = wrapper_path_for_host(state.config.flavor.host_id());
 
     StatusResult {
         host_version: HOST_VERSION,
@@ -151,12 +151,6 @@ async fn bridge_status(state: &AppState) -> StatusResult {
         wrapper_path: wrapper_path.display().to_string(),
         wrapper_present: wrapper_path.exists(),
     }
-}
-
-fn host_wrapper_dir() -> PathBuf {
-    dirs::home_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join(".local/share/keystone/native-hosts")
 }
 
 async fn bridge_open_settings(state: &AppState) -> OpenSettingsResult {
