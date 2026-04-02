@@ -21,6 +21,7 @@ Important limits:
 This repository currently contains:
 
 - the canonical concept: [CONCEPT.keystone.latest.md](./CONCEPT.keystone.latest.md)
+- the current threat model: [THREAT_MODEL.md](./THREAT_MODEL.md)
 - the v1 protocol: [PROTOCOL.md](./PROTOCOL.md)
 - a working Rust native host in `src/`
 - a local admin UI served from Keystone itself at `/admin`
@@ -106,7 +107,7 @@ cargo run --bin keystone -- serve
 ```
 
 This starts Keystone's localhost HTTP server, prints the admin URL, and keeps running until `Ctrl+C`.
-That localhost surface is part of Keystone's transport layer and still needs an explicit threat-model document and tighter control-plane wording.
+That localhost surface is part of Keystone's transport layer. The current security assumptions are documented in [THREAT_MODEL.md](./THREAT_MODEL.md).
 
 ## Packaging
 
