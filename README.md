@@ -2,6 +2,8 @@
 
 Your local key host for secure connections in insecure browser terrain.
 
+License: [MIT](./LICENSE)
+
 This repository currently contains:
 
 - the canonical concept: [CONCEPT.keystone.latest.md](./CONCEPT.keystone.latest.md)
