@@ -544,7 +544,8 @@ async fn admin_status(
                 browser_root_present: browser_root_path.exists(),
                 present: manifest_path.exists(),
                 install_command: format!(
-                    "keystone install {} {} {} {}",
+                    "{} install {} {} {} {}",
+                    shell_escape(&binary_path),
                     shell_escape(browser),
                     shell_escape(state.config.flavor.as_str()),
                     shell_escape(&extension_id_hint),
